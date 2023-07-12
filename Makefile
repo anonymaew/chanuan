@@ -4,7 +4,7 @@ BUILDDIR	= build
 HEADERDIR	= include
 
 CC		= g++
-CFLAGS		= -Wall -std=c++11
+CFLAGS		= -Wall -std=c++17
 
 SOURCES		= $(wildcard $(SOURCEDIR)/*.cpp)
 OBJECTS		= $(patsubst $(SOURCEDIR)/%.cpp,$(BUILDDIR)/%.o,$(SOURCES))
