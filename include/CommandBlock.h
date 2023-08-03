@@ -9,7 +9,7 @@
 #pragma once
 
 class CommandBlock {
-  private:
+  protected:
   std::string command;
   std::vector<std::string> output;
   std::array<int, 2> size;
@@ -18,16 +18,18 @@ class CommandBlock {
   std::condition_variable *trigger;
   std::chrono::seconds interval;
 
+  virtual void update(std::vector<std::string> output, std::array<int, 2> size);
+
   public:
   CommandBlock();
   CommandBlock(std::string command);
   CommandBlock(std::string command, int interval);
-  void assign_trigger(std::condition_variable *trigger);
 
-  void execute();
-  void start();
-  void stop();
-  std::vector<std::string> get() const;
-  std::array<int, 2> get_size() const;
-  std::string to_string() const;
+  virtual void assign_trigger(std::condition_variable *trigger);
+  virtual void execute();
+  virtual void start();
+  virtual void stop();
+  virtual std::vector<std::string> get() const;
+  virtual std::array<int, 2> get_size() const;
+  virtual std::string to_string() const;
 };

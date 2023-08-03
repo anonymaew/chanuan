@@ -8,31 +8,23 @@
 
 #pragma once
 
-class Block {
-  private:
-  CommandBlock *cb;
-  std::vector<Block*> children;
-  std::vector<std::string> output;
-  std::array<int, 2> size;
-  std::condition_variable *trigger;
-  std::mutex mutex;
-  std::thread thread;
+class Block : protected CommandBlock {
+  protected:
+  std::vector<CommandBlock*> children;
 
-  void assign_trigger(std::condition_variable *trigger);
-  void start_recursive();
-  void update();
+  virtual void update(std::vector<std::string> output, std::array<int, 2> size);
   
   public:
   Block();
   Block(std::string command);
   Block(std::string command, int interval);
-  Block(std::vector<Block*> children);
-  Block(const Block &other);
-  ~Block();
+  Block(std::vector<CommandBlock*> children);
+  void start_main();
 
-  void start();
-  void stop();
-  std::array<int, 2> get_size() const;
-  std::vector<std::string> get() const;
-  std::string to_string() const;
+  virtual void assign_trigger(std::condition_variable *trigger);
+  virtual void start();
+  virtual void stop();
+  virtual std::vector<std::string> get() const;
+  virtual std::array<int, 2> get_size() const;
+  virtual std::string to_string() const;
 };

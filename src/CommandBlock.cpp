@@ -54,25 +54,29 @@ int ansi_txt_len(const std::string str) {
   return len;
 }
 
+void CommandBlock::update(std::vector<std::string> output, std::array<int, 2> size) {
+  mutex.lock();
+  this->output = output;
+  this->size = size;
+  mutex.unlock();
+}
+
 void CommandBlock::execute() {
   FILE *fp = popen(command.c_str(), "r");
   if (fp == NULL)
     throw std::runtime_error("Failed to execute command");
 
   char buffer[4096];
-  for (int i = 0; fgets(buffer, sizeof(buffer), fp) != NULL; i++) {
+  std::vector<std::string> output_temp;
+  std::array<int, 2> size_temp = {0, 0};
+  while (fgets(buffer, sizeof(buffer), fp) != NULL) {
     std::string buffer_str(buffer);
     buffer_str = string_trim_end(buffer_str);
-    mutex.lock();
-    if (i == 0) {
-      output.clear();
-      size = {0, 0};
-    }
-    output.push_back(buffer_str);
-    size = {std::max(size[0], ansi_txt_len(buffer_str)), size[1] + 1};
-    mutex.unlock();
+    output_temp.push_back(buffer_str);
+    size_temp = {std::max(size_temp[0], ansi_txt_len(buffer_str)), size_temp[1] + 1};
   }
   pclose(fp);
+  update(output_temp, size_temp);
 }
 
 void CommandBlock::start() {

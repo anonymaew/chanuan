@@ -11,79 +11,52 @@
 #include "CommandBlock.h"
 
 Block::Block() : Block(""){
-  delete cb;
-  cb = nullptr;
 }
 
 Block::Block(std::string command) : Block(command, 1){
 }
 
-Block::Block(std::string command, int interval) {
-  cb = new CommandBlock(command, interval);
-  output = std::vector<std::string>();
-  size = {0, 0};
+Block::Block(std::string command, int interval) : CommandBlock(command, interval) {
 }
 
-Block::Block(std::vector<Block*> children) : Block(){
+Block::Block(std::vector<CommandBlock*> children) : Block(){
   this->children = children;
 }
 
-Block::Block(const Block &other) {
-  cb = other.cb;
-  children = other.children;
-  output = other.output;
-  size = other.size;
+void Block::assign_trigger(std::condition_variable *trigger){
+  CommandBlock::assign_trigger(trigger);
+  for (CommandBlock *child : children)
+    child->assign_trigger(trigger);
 }
 
-Block::~Block() {
-  if (cb != nullptr)
-    delete cb;
+void Block::start(){
+  for (CommandBlock *child : children)
+    child->start();
 }
 
-void Block::assign_trigger(std::condition_variable *trigger) {
-  if (cb != nullptr)
-    cb->assign_trigger(trigger);
-  else
-    for (Block *child : children)
-      child->assign_trigger(trigger);
-}
-
-void Block::start_recursive() {
-  if (cb != nullptr)
-    cb->start();
-  else
-    for (Block *child : children)
-      child->start_recursive();
-}
-
-void Block::update() {
-  if (cb != nullptr) {
-    output = cb->get();
-    size = cb->get_size();
-  } else {
-    output.clear();
-    size = {0, 0};
-    for (Block *child : children) {
-      child->update();
-      std::vector<std::string> child_output = child->get();
-      std::array<int, 2> child_size = child->get_size();
-      // vertical
-      for (std::string col : child_output)
-        output.push_back(col);
-      size = {std::max(size[0], child_size[0]), size[1] + child_size[1]};
+void Block::update(std::vector<std::string> output, std::array<int, 2> size) {
+  this->output.clear();
+  this->size = {0, 0};
+  for (CommandBlock *child : children) {
+    std::vector<std::string> child_output = child->get();
+    std::array<int, 2> child_size = child->get_size();
+    // vertical
+    for (std::string col : child_output) {
+      this->output.push_back(col);
+      this->size = {std::max(size[0], child_size[0]), this->size[1] + child_size[1]};
     }
   }
 }
 
-void Block::start() {
+void Block::start_main() {
   trigger = new std::condition_variable();
   assign_trigger(trigger);
-  start_recursive();
+  start();
   thread = std::thread([&]() {
     while (true) {
       std::unique_lock<std::mutex> lock(mutex);
       trigger->wait(lock);
-      update();
+      update(output, size);
       std::cout << "\033[2J\033[1;1H" << to_string();
     }
   });
@@ -92,11 +65,8 @@ void Block::start() {
 
 void Block::stop() {
   delete trigger;
-  if (cb != nullptr)
-    cb->stop();
-  else
-    for (Block *child : children)
-      child->stop();
+  for (CommandBlock *child : children)
+    child->stop();
 }
 
 std::array<int, 2> Block::get_size() const {
