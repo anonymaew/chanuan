@@ -39,7 +39,7 @@ std::string string_trim_end(std::string str) {
 int ansi_txt_len(const std::string str) {
   size_t len = 0;
   int ansi = 0;
-  for (int i = 0; i < str.length(); i++) {
+  for (size_t i = 0; i < str.length(); i++) {
     if (ansi) {
       if (str[i] == 'm')
         ansi = 0;
@@ -87,6 +87,10 @@ void CommandBlock::start() {
   thread.detach();
 }
 
+void CommandBlock::stop() {
+  thread.~thread();
+}
+
 std::vector<std::string> CommandBlock::get() const{
   return output;
 }
@@ -97,7 +101,7 @@ std::array<int, 2> CommandBlock::get_size() const{
 
 std::string CommandBlock::to_string() const{
   std::string result = "";
-  for (int i = 0; i < output.size(); i++)
+  for (size_t i = 0; i < output.size(); i++)
     result += output[i] + "\n";
   return result;
 }

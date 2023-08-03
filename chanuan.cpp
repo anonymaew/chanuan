@@ -1,10 +1,9 @@
-#include <condition_variable>
+#include <chrono>
 #include <iostream>
 #include <string>
-#include <unistd.h>
 #include <vector>
 
-#include "CommandBlock.h"
+#include "Block.h"
 
 int main(int argc, char *argv[])
 {
@@ -13,26 +12,20 @@ int main(int argc, char *argv[])
     // for (std::string line; std::getline(scripts, line);)
     //     blocks.push_back(CommandBlock(line));
     
-    std::condition_variable cv;
-    std::mutex cvm;
+    Block *b1 = new Block("date",1);
+    Block *b2 = new Block("date",2);
+    Block *b3 = new Block("date",3);
 
-    std::vector<CommandBlock*> blocks;
-    blocks.push_back(new CommandBlock("python3 -c 'import time; time.sleep(1); print(time.time());'", 3));
-    blocks.push_back(new CommandBlock("python3 -c 'import time; print(time.time());'", 3));
-    blocks.push_back(new CommandBlock("python3 -c 'import time; print(time.time());'", 2));
-    for (CommandBlock* cb : blocks) {
-        cb->assign_trigger(&cv);
-        cb->start();
-    }
+    std::vector<Block*> blocks;
+    blocks.push_back(b1);
+    blocks.push_back(b2);
+    blocks.push_back(b3);
 
-    while (true) {
-        std::unique_lock<std::mutex> lock(cvm);
-        cv.wait(lock);
+    Block b(blocks);
 
-        std::cout << "\033[2J\033[1;1H";
-        for (CommandBlock* cb : blocks)
-            std::cout << cb->to_string();
-    }
+    b.start();
+    std::this_thread::sleep_for(std::chrono::seconds(5));
+    b.stop();
 
     return 0;
 }
