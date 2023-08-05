@@ -12,10 +12,10 @@ class CommandBlock {
   std::array<int, 2> size;
   std::thread thread;
   std::mutex mutex;
-  std::condition_variable *trigger;
+  std::condition_variable *trigger_consumer;
   std::chrono::seconds interval;
 
-  virtual void update(std::vector<std::string> output, std::array<int, 2> size);
+  virtual void produce();
 
   public:
   CommandBlock();
@@ -23,7 +23,6 @@ class CommandBlock {
   CommandBlock(std::string command, int interval);
 
   virtual void assign_trigger(std::condition_variable *trigger);
-  virtual void execute();
   virtual void start();
   virtual void stop();
   virtual std::vector<std::string> get() const;

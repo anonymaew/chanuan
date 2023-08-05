@@ -1,11 +1,9 @@
 #include "CommandBlock.h"
 
-CommandBlock::CommandBlock() {
-  CommandBlock(nullptr, 1);
+CommandBlock::CommandBlock() : CommandBlock("") {
 }
 
-CommandBlock::CommandBlock(std::string command) {
-  CommandBlock(command, 1);
+CommandBlock::CommandBlock(std::string command) : CommandBlock(command, 1) {
 }
 
 CommandBlock::CommandBlock(std::string command, int interval) {
@@ -16,7 +14,7 @@ CommandBlock::CommandBlock(std::string command, int interval) {
 }
 
 void CommandBlock::assign_trigger(std::condition_variable *trigger) {
-  this->trigger = trigger;
+  trigger_consumer = trigger;
 }
 
 std::string string_trim_end(std::string str) {
@@ -44,14 +42,7 @@ int ansi_txt_len(const std::string str) {
   return len;
 }
 
-void CommandBlock::update(std::vector<std::string> output, std::array<int, 2> size) {
-  mutex.lock();
-  this->output = output;
-  this->size = size;
-  mutex.unlock();
-}
-
-void CommandBlock::execute() {
+void CommandBlock::produce() {
   FILE *fp = popen(command.c_str(), "r");
   if (fp == NULL)
     throw std::runtime_error("Failed to execute command");
@@ -66,15 +57,16 @@ void CommandBlock::execute() {
     size_temp = {std::max(size_temp[0], ansi_txt_len(buffer_str)), size_temp[1] + 1};
   }
   pclose(fp);
-  update(output_temp, size_temp);
+  output = output_temp;
+  size = size_temp;
 }
 
 void CommandBlock::start() {
   thread = std::thread([&]() {
     while (true) {
       auto now = std::chrono::system_clock::now();
-      execute();
-      trigger->notify_one();
+      produce();
+      trigger_consumer->notify_all();
       std::this_thread::sleep_until(now + interval);
     }
   });

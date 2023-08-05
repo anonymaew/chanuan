@@ -18,16 +18,12 @@ Block::Block(std::vector<CommandBlock*> children) : Block(){
 
 void Block::assign_trigger(std::condition_variable *trigger){
   CommandBlock::assign_trigger(trigger);
+  trigger_producer = new std::condition_variable();
   for (CommandBlock *child : children)
-    child->assign_trigger(trigger);
+    child->assign_trigger(trigger_producer);
 }
 
-void Block::start(){
-  for (CommandBlock *child : children)
-    child->start();
-}
-
-void Block::update(std::vector<std::string> output, std::array<int, 2> size) {
+void Block::produce() {
   this->output.clear();
   this->size = {0, 0};
   for (CommandBlock *child : children) {
@@ -41,25 +37,44 @@ void Block::update(std::vector<std::string> output, std::array<int, 2> size) {
   }
 }
 
-void Block::start_main() {
-  trigger = new std::condition_variable();
-  assign_trigger(trigger);
-  start();
+void Block::start(){
+  for (CommandBlock *child : children)
+    child->start();
   thread = std::thread([&]() {
     while (true) {
       std::unique_lock<std::mutex> lock(mutex);
-      trigger->wait(lock);
-      update(output, size);
-      std::cout << "\033[2J\033[1;1H" << to_string();
+      trigger_producer->wait(lock);
+      produce();
+      trigger_consumer->notify_all();
     }
   });
   thread.detach();
 }
 
-void Block::stop() {
-  delete trigger;
+void Block::start_main() {
+  assign_trigger(new std::condition_variable());
+  start();
+  thread_printer = std::thread([&]() {
+    while (true) {
+      std::unique_lock<std::mutex> lock(mutex);
+      trigger_producer->wait(lock);
+      std::cout << "\033[2J\033[1;1H" << to_string();
+    }
+  });
+  thread_printer.detach();
+}
+
+void Block::stop(){
+  CommandBlock::stop();
+  delete trigger_producer;
   for (CommandBlock *child : children)
     child->stop();
+}
+
+void Block::stop_main(){
+  stop();
+  delete trigger_consumer;
+  thread_printer.~thread();
 }
 
 std::array<int, 2> Block::get_size() const {
