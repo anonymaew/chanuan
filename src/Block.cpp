@@ -10,6 +10,7 @@ Block::Block(std::string command) : Block(command, 1){
 }
 
 Block::Block(std::string command, int interval) : CommandBlock(command, interval) {
+  children = { new CommandBlock(command, interval) };
 }
 
 Block::Block(std::vector<CommandBlock*> children) : Block(){
@@ -57,7 +58,7 @@ void Block::start_main() {
   thread_printer = std::thread([&]() {
     while (true) {
       std::unique_lock<std::mutex> lock(mutex);
-      trigger_producer->wait(lock);
+      trigger_consumer->wait(lock);
       std::cout << "\033[2J\033[1;1H" << to_string();
     }
   });
@@ -77,17 +78,14 @@ void Block::stop_main(){
   thread_printer.~thread();
 }
 
-std::array<int, 2> Block::get_size() const {
-  return size;
+std::vector<std::string> Block::get() const {
+  return CommandBlock::get();
 }
 
-std::vector<std::string> Block::get() const {
-  return output;
+std::array<int, 2> Block::get_size() const {
+  return CommandBlock::get_size();
 }
 
 std::string Block::to_string() const {
-  std::string result = "";
-  for (std::string line : output)
-    result += line + "\n";
-  return result;
+  return CommandBlock::to_string();
 }

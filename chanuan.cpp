@@ -1,8 +1,10 @@
+#include <locale.h>
 #include <iostream>
 #include "Block.h"
 
 int main(int argc, char *argv[])
 {
+    setlocale(LC_ALL, "");
     // std::ifstream scripts("scripts.txt");
 
     // for (std::string line; std::getline(scripts, line);)
@@ -11,7 +13,7 @@ int main(int argc, char *argv[])
     CommandBlock *b1 = new CommandBlock("date",1);
     CommandBlock *b2 = new CommandBlock("date",2);
     CommandBlock *b3 = new CommandBlock("date",3);
-    CommandBlock *b4 = new CommandBlock("date",4);
+    CommandBlock *b4 = new CommandBlock("cal",4);
     std::vector<CommandBlock*> bl({b1, b2});
     Block *bb1 = new Block(bl);
     std::vector<CommandBlock*> bl2({bb1, b3});

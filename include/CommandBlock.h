@@ -11,11 +11,12 @@ class CommandBlock {
   std::vector<std::string> output;
   std::array<int, 2> size;
   std::thread thread;
-  std::mutex mutex;
   std::condition_variable *trigger_consumer;
   std::chrono::seconds interval;
+  enum class Border { NONE, SINGLE, ROUND } border;
 
   virtual void produce();
+  virtual void produce_border();
 
   public:
   CommandBlock();
@@ -29,3 +30,5 @@ class CommandBlock {
   virtual std::array<int, 2> get_size() const;
   virtual std::string to_string() const;
 };
+
+int str_grapheme_length(std::string str);

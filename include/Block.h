@@ -6,6 +6,7 @@ class Block : public CommandBlock {
   protected:
   std::vector<CommandBlock*> children;
   std::thread thread_printer;
+  std::mutex mutex;
   std::condition_variable *trigger_producer;
 
   void produce();
