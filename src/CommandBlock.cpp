@@ -1,4 +1,3 @@
-#include <map>
 #include <curses.h>
 #include "CommandBlock.h"
 #include <iostream>
@@ -15,6 +14,7 @@ CommandBlock::CommandBlock(std::string command, int interval) {
   output = std::vector<std::string>();
   size = {0, 0};
   border = Border::ROUND;
+  fresh = false;
 }
 
 void CommandBlock::assign_trigger(std::condition_variable *trigger) {
@@ -28,13 +28,23 @@ std::string string_trim_end(std::string str) {
   return str.substr(0, i + 1);
 }
 
-int str_grapheme_length(std::string str) {
-  int length = 0;
+int str_display_length(std::string str) {
+  int len = 0;
+  bool ansi = false;
   for (int i = 0; i < str.length(); i++) {
+    if (str[i] == '\033') {
+      ansi = true;
+      continue;
+    }
+    if (ansi) {
+      if (str[i] == 'm')
+        ansi = false;
+      continue;
+    }
     if ((str[i] & 0xc0) != 0x80)
-      length++;
+      len++;
   }
-  return length;
+  return len;
 }
 
 void process_output(std::vector<std::string> &output, std::array<int, 2> &size) {
@@ -42,7 +52,7 @@ void process_output(std::vector<std::string> &output, std::array<int, 2> &size) 
     line = string_trim_end(line);
   std::vector<int> size_line = {};
   for (std::string line : output)
-    size_line.push_back(str_grapheme_length(line));
+    size_line.push_back(str_display_length(line));
 
   int max_size = std::max_element(size_line.begin(), size_line.end())[0];
   for (int i = 0; i < output.size(); i++) {
@@ -66,34 +76,7 @@ void CommandBlock::produce() {
     output.push_back(buffer);
   pclose(fp);
   process_output(output, size);
-  produce_border();
-}
-
-void CommandBlock::produce_border() {
-  if (border == Border::NONE)
-    return;
-  std::map<Border, std::vector<std::string>> border_map = {
-    {Border::SINGLE, { u8"─",u8"┐",u8"│",u8"┘",u8"─",u8"└",u8"│",u8"┌"}},
-    {Border::ROUND, { u8"─",u8"╮",u8"│",u8"╯",u8"─",u8"╰",u8"│",u8"╭"}}
-  };
-  for (size_t i = 0; i < output.size(); i++)
-    output[i] =
-      border_map[border][2] +
-      output[i] +
-      border_map[border][6];
-  std::string top_border = border_map[border][0];
-  std::string bottom_border = border_map[border][4];
-  std::string top = border_map[border][7];
-  std::string bottom = border_map[border][5];
-  for (int i = 0; i < size[0]; i++) {
-    top += top_border;
-    bottom += bottom_border;
-  }
-  top += border_map[border][1];
-  bottom += border_map[border][3];
-  output.insert(output.begin(), top);
-  output.push_back(bottom);
-  size = {size[0] + 2, size[1] + 2};
+  fresh = true;
 }
 
 void CommandBlock::start() {
@@ -112,17 +95,24 @@ void CommandBlock::stop() {
   thread.~thread();
 }
 
-std::vector<std::string> CommandBlock::get() const {
+std::vector<std::string> CommandBlock::get() {
+  fresh = false;
   return output;
 }
 
-std::array<int, 2> CommandBlock::get_size() const {
+std::array<int, 2> CommandBlock::get_size() {
+  fresh = false;
   return size;
 }
 
-std::string CommandBlock::to_string() const {
+std::string CommandBlock::to_string() {
+  fresh = false;
   std::string result = "";
   for (size_t i = 0; i < output.size(); i++)
     result += output[i] + "\n";
   return result;
+}
+
+bool CommandBlock::is_fresh() const {
+  return fresh;
 }

@@ -1,4 +1,5 @@
 #include <iostream>
+#include <map>
 
 #include "Block.h"
 #include "CommandBlock.h"
@@ -36,6 +37,42 @@ void Block::produce() {
       this->size = {std::max(size[0], child_size[0]), this->size[1] + child_size[1]};
     }
   }
+  produce_border();
+  fresh = true;
+}
+
+void Block::produce_border() {
+  if (border == Border::NONE)
+    return;
+  std::map<Border, std::vector<std::string>> border_map = {
+    {Border::SINGLE, { u8"─",u8"┐",u8"│",u8"┘",u8"─",u8"└",u8"│",u8"┌"}},
+    {Border::ROUND, { u8"─",u8"╮",u8"│",u8"╯",u8"─",u8"╰",u8"│",u8"╭"}}
+  };
+  for (size_t i = 0; i < output.size(); i++)
+    output[i] =
+      border_map[border][2] +
+      output[i] +
+      border_map[border][6];
+  std::string top_border = border_map[border][0];
+  std::string bottom_border = border_map[border][4];
+  std::string top = border_map[border][7];
+  std::string bottom = border_map[border][5];
+  for (int i = 0; i < size[0]; i++) {
+    top += top_border;
+    bottom += bottom_border;
+  }
+  top += border_map[border][1];
+  bottom += border_map[border][3];
+  output.insert(output.begin(), top);
+  output.push_back(bottom);
+  size = {size[0] + 2, size[1] + 2};
+}
+
+bool Block::is_child_fresh() const {
+  for (CommandBlock *child : children)
+    if (child->is_fresh())
+      return true;
+  return false;
 }
 
 void Block::start(){
@@ -44,7 +81,7 @@ void Block::start(){
   thread = std::thread([&]() {
     while (true) {
       std::unique_lock<std::mutex> lock(mutex);
-      trigger_producer->wait(lock);
+      trigger_producer->wait(lock, [&]() { return is_child_fresh(); });
       produce();
       trigger_consumer->notify_all();
     }
@@ -58,7 +95,7 @@ void Block::start_main() {
   thread_printer = std::thread([&]() {
     while (true) {
       std::unique_lock<std::mutex> lock(mutex);
-      trigger_consumer->wait(lock);
+      trigger_consumer->wait(lock, [&]() { return is_fresh(); });
       std::cout << "\033[2J\033[1;1H" << to_string();
     }
   });
@@ -78,14 +115,18 @@ void Block::stop_main(){
   thread_printer.~thread();
 }
 
-std::vector<std::string> Block::get() const {
+std::vector<std::string> Block::get() {
   return CommandBlock::get();
 }
 
-std::array<int, 2> Block::get_size() const {
+std::array<int, 2> Block::get_size() {
   return CommandBlock::get_size();
 }
 
-std::string Block::to_string() const {
+std::string Block::to_string() {
   return CommandBlock::to_string();
+}
+
+bool Block::is_fresh() const {
+  return CommandBlock::is_fresh();
 }

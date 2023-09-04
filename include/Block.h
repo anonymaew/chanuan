@@ -13,6 +13,9 @@ class Block : public CommandBlock {
   void start();
   void stop();
 
+  void produce_border();
+  bool is_child_fresh() const;
+
   public:
   Block();
   Block(std::string command);
@@ -22,7 +25,8 @@ class Block : public CommandBlock {
   void stop_main();
 
   void assign_trigger(std::condition_variable *trigger);
-  std::vector<std::string> get() const;
-  std::array<int, 2> get_size() const;
-  std::string to_string() const;
+  std::vector<std::string> get();
+  std::array<int, 2> get_size();
+  std::string to_string();
+  bool is_fresh() const;
 };
