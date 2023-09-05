@@ -3,7 +3,7 @@ SOURCEDIR	= src
 BUILDDIR	= build
 HEADERDIR	= include
 
-CC		= gcc
+CC		= g++
 CFLAGS		= -Wall -std=c++11
 
 SOURCES		= $(wildcard $(SOURCEDIR)/*.cpp)
@@ -17,7 +17,7 @@ COMPILER	= $(CC) $(CFLAGS) -I$(HEADERPATH)
 all: $(MAIN)
 
 $(MAIN): $(OBJECTS) $(MAIN).cpp
-	$(COMPILER) -lstdc++ -lcurses -o $(MAIN) $(OBJECTS) $(MAIN).cpp
+	$(COMPILER) -o $(MAIN) $(OBJECTS) $(MAIN).cpp
 
 $(BUILDDIR)/%.o: $(SOURCEDIR)/%.cpp build_dir
 	$(COMPILER) $(DEPFLAGS) -c $< -o $@
